@@ -30,7 +30,7 @@
     "fastify": "^4.28.1",
     "@fastify/autoload": "^4.0.0",
     "fastify-plugin": "^4.5.1",
-    "fastify-sensible": "^5.1.0",
+    "@fastify/sensible": "^5.1.0",
     "fastify-static": "^6.12.0",
     "fastify-websocket": "^7.1.0",
     "got": "^12.6.0",
