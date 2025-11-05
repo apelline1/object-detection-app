@@ -54,9 +54,9 @@ module.exports = async function (fastify, opts) {
     connection.socket.on("error", (err) => {
       fastify.log.warn(err, "WebSocket error caught");
     });
-    // === END OF FIX ===
+    // === END OF FIX ====
   });
-  
+
   fastify.register(AutoLoad, {
     dir: path.join(__dirname, "routes"),
     options: Object.assign({}, opts),
