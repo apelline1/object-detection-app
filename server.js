@@ -12,7 +12,7 @@ const app = fastify({
 
 app.register(require("./app.js"));
 
-app.listen(PORT, IP, (err) => {
+app.listen({ port: PORT, host: IP }, (err) => {
   if (err) {
     app.log.error(err);
     process.exit(1);
