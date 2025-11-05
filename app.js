@@ -29,7 +29,7 @@ module.exports = async function (fastify, opts) {
     root: path.join(__dirname, "frontend/build"),
     wildcard: false,
   });
-
+//Kafka config is used for video streaming via Kafka topics
   if (kafkaConfig) {
     // fastify.log.info("%j", kafkaConfig);
     try {
