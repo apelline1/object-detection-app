@@ -14,4 +14,5 @@ cd frontend
 pwd
 
 #npm install
+npm audit fix
 npm start

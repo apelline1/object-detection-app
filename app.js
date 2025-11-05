@@ -1,7 +1,7 @@
 "use strict";
 
 const path = require("path");
-const Static = require("fastify-static");
+const Static = require("@fastify/static");
 const AutoLoad = require("fastify-autoload");
 const Sensible = require("fastify-sensible");
 
