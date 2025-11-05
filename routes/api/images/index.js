@@ -9,30 +9,47 @@ const imageStoragePrefix = "images";
 
 module.exports = async function (fastify, opts) {
   fastify.post("/", async function (request, reply) {
-    const image = _.get(request, "body.image");
-    if (!image) {
-      reply.code(422);
+    // === START OF NEW TRY...CATCH BLOCK ===
+    try {
+      const image = _.get(request, "body.image");
+      if (!image) {
+        reply.code(422);
+        return {
+          status: "error",
+          statusCode: 422,
+          message: "Missing Fields: image",
+        };
+      }
+
+      const base64data = image.replace(/^da36ta:image\/(png|jpg|jpeg);base64,/, "");
+      const buff = Buffer.from(base64data, "base64");
+
+      let file;
+      try {
+        file = await writeJpg(buff, request);
+      } catch (error) {
+        request.log.error("error occurred writing photo");
+        request.log.error(error);
+      }
+
+      const { code, data } = await requestObjectDetection(base64data);
+      reply.code(code);
+      return data;
+      
+    // === THIS IS THE NEW CATCH BLOCK ===
+    } catch (error) {
+      // This will catch the ECONNRESET and stop the crash
+      request.log.error(error, "Unhandled error in /api/images handler");
+      
+      // Send a safe error message back to the browser
+      reply.code(500);
       return {
         status: "error",
-        statusCode: 422,
-        message: "Missing Fields: image",
+        statusCode: 500,
+        message: "An internal server error occurred.",
       };
     }
-
-    const base64data = image.replace(/^da36ta:image\/(png|jpg|jpeg);base64,/, "");
-    const buff = Buffer.from(base64data, "base64");
-
-    let file;
-    try {
-      file = await writeJpg(buff, request);
-    } catch (error) {
-      request.log.error("error occurred writing photo");
-      request.log.error(error);
-    }
-
-    const { code, data } = await requestObjectDetection(base64data);
-    reply.code(code);
-    return data;
+    // === END OF NEW TRY...CATCH BLOCK ===
   });
 };
 
