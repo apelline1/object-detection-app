@@ -45,12 +45,18 @@ module.exports = async function (fastify, opts) {
     options: wsOpts,
   });
 
-  fastify.get("/socket", { websocket: true }, (connection, req) => {
+ fastify.get("/socket", { websocket: true }, (connection, req) => {
     connection.socket.on("message", (message) => {
       processSocketMessage(fastify, connection, message);
     });
-  });
 
+    // === ADD THIS LINE TO FIX THE CRASH ===
+    connection.socket.on("error", (err) => {
+      fastify.log.warn(err, "WebSocket error caught");
+    });
+    // === END OF FIX ===
+  });
+  
   fastify.register(AutoLoad, {
     dir: path.join(__dirname, "routes"),
     options: Object.assign({}, opts),
