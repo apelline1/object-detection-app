@@ -1,3 +1,4 @@
 import { watchSendImage } from "./sendImage";
+import { watchSendVideo } from "./sendVideo";
 
-export default [watchSendImage()];
+export default [watchSendImage(), watchSendVideo()];

@@ -1,16 +1,18 @@
 import React, { useEffect } from "react";
-import { withRouter } from "react-router-dom";
-import { connect } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 import { getStatus } from "../actions";
 import Routes from "../../Routes";
 
 import "./App.scss";
 
-function App({ status, getStatus }) {
+function App() {
+  const dispatch = useDispatch();
+  const status = useSelector((state) => state.appReducer?.status);
+
   useEffect(() => {
-    getStatus();
-  }, []); // eslint-disable-line
+    dispatch(getStatus());
+  }, [dispatch]);
 
   return (
     <div className="app">
@@ -19,16 +21,4 @@ function App({ status, getStatus }) {
   );
 }
 
-function mapStateToProps(state) {
-  return state.appReducer;
-}
-
-function mapDispatchToProps(dispatch) {
-  return {
-    getStatus: () => {
-      dispatch(getStatus());
-    },
-  };
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(withRouter(App));
+export default App;

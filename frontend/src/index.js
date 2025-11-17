@@ -1,22 +1,23 @@
 import React from "react";
-import ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 import { BrowserRouter as Router } from "react-router-dom";
 import { Provider } from "react-redux";
 import configureStore from "./utilities/configureStore";
 // eslint-disable-next-line
 import socketChannel from "./Socket/channel";
 
-import "typeface-roboto";
+import "@mui/material/styles";
 import "./index.scss";
 import App from "./App";
 
 const store = configureStore();
+const container = document.getElementById("root");
+const root = createRoot(container);
 
-ReactDOM.render(
+root.render(
   <Provider store={store}>
     <Router>
       <App />
     </Router>
-  </Provider>,
-  document.getElementById("root")
+  </Provider>
 );

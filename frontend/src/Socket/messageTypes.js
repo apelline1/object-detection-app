@@ -10,4 +10,5 @@ export const OUTGOING_MESSAGE_TYPES = {
   PING: "ping",
   HELP: "help",
   IMAGE: "image",
+  VIDEO: "video",
 };

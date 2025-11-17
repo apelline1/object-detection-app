@@ -21,7 +21,7 @@ module.exports = async function (fastify, opts) {
         };
       }
 
-      const base64data = image.replace(/^da36ta:image\/(png|jpg|jpeg);base64,/, "");
+      const base64data = image.replace(/^data:image\/(png|jpg|jpeg);base64,/, "");
       const buff = Buffer.from(base64data, "base64");
 
       let file;

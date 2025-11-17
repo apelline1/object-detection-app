@@ -26,6 +26,10 @@ function processSocketMessage(fastify, conn, messageStr) {
       require("./handlers/image")(fastify, conn, messageObj);
       break;
 
+    case INCOMING_MESSAGE_TYPES.VIDEO:
+      require("./handlers/video")(fastify, conn, messageObj);
+      break;
+
     default:
       fastify.log.warn(`Unhandled message of type '${messageObj.type}'`);
       break;

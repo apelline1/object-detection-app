@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback, Component } from "react";
-import { connect } from "react-redux";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import { Button, Switch } from "@material-ui/core";
-import { makeStyles } from "@material-ui/core/styles";
+import { Button, IconButton, Tooltip } from "@mui/material";
 import { resetSearch, searchPhoto } from "../actions";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -15,183 +14,192 @@ import { faCircle } from "@fortawesome/free-regular-svg-icons";
 
 import "./Photo.scss";
 
-const useStyles = makeStyles((theme) => ({
-  button: {
-    margin: theme.spacing(1),
-  },
-  input: {
-    display: "none",
-  },
-}));
+function Photo() {
+  const dispatch = useDispatch();
 
-function Photo({
-  reset,
-  searchPhoto,
-  predictionPending,
-  predictionResponse,
-  prediction,
-  predictionError,
-  minScore,
-  labelSettings,
-  status,
-}) {
+  // Redux state
+  const {
+    predictionPending,
+    predictionResponse,
+    prediction,
+    predictionError,
+    minScore,
+    labelSettings,
+    status,
+  } = useSelector((state) => ({
+    ...state.appReducer,
+    ...state.photoReducer,
+  }));
+
+  // Refs
+  const videoRef = useRef(null);
+  const imageCanvasRef = useRef(null);
+  const zonesCanvasRef = useRef(null);
+  const streamRef = useRef(null);
+
+  // State
   const [image, setImage] = useState(null);
-  const [cameraEnabled, setCameraEnabled] = useState(null);
-  const [video, setVideo] = useState(null);
+  const [cameraEnabled, setCameraEnabled] = useState(true);
   const [videoWidth, setVideoWidth] = useState(0);
   const [videoHeight, setVideoHeight] = useState(0);
-  const [imageCanvas, setImageCanvas] = useState(null);
-  const [zonesCanvas, setZonesCanvas] = useState(null);
   const [facingMode, setFacingMode] = useState("environment");
 
-  const classes = useStyles();
-
+  // Initialize camera
   useEffect(() => {
-    enableCamera();
-  }, []);
+    if (cameraEnabled && !image) {
+      initializeCamera();
+    }
 
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [cameraEnabled, image, facingMode]);
+
+  // Draw detections when prediction changes
   useEffect(() => {
     drawDetections();
   }, [prediction]);
 
-  const videoRef = useCallback(
-    (node) => {
-      setVideo(node);
-      if (node) {
-        navigator.mediaDevices
-          .getUserMedia({ video: { facingMode } })
-          .then((stream) => (node.srcObject = stream));
+  const initializeCamera = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode },
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
       }
-    },
-    [facingMode]
-  );
+    } catch (error) {
+      console.error("Error accessing camera:", error);
+    }
+  }, [facingMode]);
 
-  const imageCanvasRef = useCallback((node) => {
-    setImageCanvas(node);
-  }, []);
-
-  const zonesCanvasRef = useCallback((node) => {
-    setZonesCanvas(node);
-  }, []);
-
-  function enableCamera() {
-    setCameraEnabled(!cameraEnabled);
+  const enableCamera = useCallback(() => {
+    setCameraEnabled(true);
     setImage(null);
-  }
+    dispatch(resetSearch());
+  }, [dispatch]);
 
-  function onCameraToggled() {
-    reset();
+  const onCameraToggled = useCallback(() => {
     enableCamera();
-  }
+  }, [enableCamera]);
 
-  function onCameraClicked() {
-    updateImageCanvas();
+  const onCameraClicked = useCallback(() => {
+    if (!videoRef.current || !imageCanvasRef.current) return;
 
-    let imageData = imageCanvas.toDataURL("image/jpeg");
-    const base64data = imageData.replace(/^data:image\/(png|jpg|jpeg);base64,/, "");
-    searchPhoto(base64data);
+    const video = videoRef.current;
+    const canvas = imageCanvasRef.current;
 
-    updateZonesCanvas();
-  }
-
-  function updateImageCanvas() {
     setVideoWidth(video.videoWidth);
     setVideoHeight(video.videoHeight);
 
-    if (!imageCanvas) {
-      return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+
+    if (streamRef.current) {
+      streamRef.current.getVideoTracks().forEach((track) => track.stop());
     }
 
-    imageCanvas.width = video.videoWidth;
-    imageCanvas.height = video.videoHeight;
-
-    imageCanvas.getContext("2d").drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-
-    video.srcObject.getVideoTracks().forEach((track) => {
-      track.stop();
-    });
-
-    setImage(imageCanvas.toDataURL());
+    setImage(canvas.toDataURL());
     setCameraEnabled(false);
-  }
+    updateZonesCanvas();
 
-  function updateZonesCanvas() {
+    const imageData = canvas.toDataURL("image/jpeg");
+    const base64data = imageData.replace(/^data:image\/(png|jpg|jpeg);base64,/, "");
+    dispatch(searchPhoto(base64data));
+  }, [dispatch]);
+
+  const updateZonesCanvas = useCallback(() => {
+    if (!zonesCanvasRef.current || !imageCanvasRef.current) return;
+
+    const zonesCanvas = zonesCanvasRef.current;
+    const imageCanvas = imageCanvasRef.current;
+
     zonesCanvas.width = imageCanvas.width;
     zonesCanvas.height = imageCanvas.height;
 
     const ctx = zonesCanvas.getContext("2d");
-
     ctx.fillStyle = "#565656";
     ctx.globalAlpha = 0.7;
     ctx.fillRect(0, 0, zonesCanvas.width, zonesCanvas.height);
-  }
+  }, []);
 
-  function drawDetections() {
-    if (!prediction || !prediction.detections || !imageCanvas.getContext) {
+  const drawDetections = useCallback(() => {
+    if (!prediction || !prediction.detections || !imageCanvasRef.current?.getContext) {
       return;
     }
 
     prediction.detections.filter((d) => d.score > minScore).forEach((d) => drawDetection(d));
-  }
+  }, [prediction, minScore]);
 
-  function drawDetection({ box, label, score }) {
-    const drawScore = true;
-    const textBgHeight = 14;
-    const padding = 2;
-    const letterWidth = 7.25;
-    const scoreWidth = drawScore ? 4 * letterWidth : 0;
-    const text = drawScore ? `${label} ${Math.floor(score * 100)}%` : label;
+  const drawDetection = useCallback(
+    ({ box, label, score }) => {
+      if (!imageCanvasRef.current) return;
 
-    const width = Math.floor((box.xMax - box.xMin) * imageCanvas.width);
-    const height = Math.floor((box.yMax - box.yMin) * imageCanvas.height);
-    const x = Math.floor(box.xMin * imageCanvas.width);
-    const y = Math.floor(box.yMin * imageCanvas.height);
-    const labelSetting = labelSettings[label];
-    const labelWidth = label.length * letterWidth + scoreWidth + padding * 2;
-    drawBox(x, y, width, height, labelSetting.bgColor);
-    drawBoxTextBG(x, y + height - textBgHeight, labelWidth, textBgHeight, labelSetting.bgColor);
-    drawBoxText(text, x + padding, y + height - padding);
-    clearZone(x + 5, y + height - textBgHeight - 4, labelWidth, textBgHeight);
-    clearZone(x, y, width, height);
-  }
+      const canvas = imageCanvasRef.current;
+      const drawScore = true;
+      const textBgHeight = 14;
+      const padding = 2;
+      const letterWidth = 7.25;
+      const scoreWidth = drawScore ? 4 * letterWidth : 0;
+      const text = drawScore ? `${label} ${Math.floor(score * 100)}%` : label;
 
-  function drawBox(x, y, width, height, color) {
-    const ctx = imageCanvas.getContext("2d");
+      const width = Math.floor((box.xMax - box.xMin) * canvas.width);
+      const height = Math.floor((box.yMax - box.yMin) * canvas.height);
+      const x = Math.floor(box.xMin * canvas.width);
+      const y = Math.floor(box.yMin * canvas.height);
+      const labelSetting = labelSettings[label] || { bgColor: "#000000" };
+      const labelWidth = label.length * letterWidth + scoreWidth + padding * 2;
+
+      drawBox(x, y, width, height, labelSetting.bgColor);
+      drawBoxTextBG(x, y + height - textBgHeight, labelWidth, textBgHeight, labelSetting.bgColor);
+      drawBoxText(text, x + padding, y + height - padding);
+      clearZone(x + 5, y + height - textBgHeight - 4, labelWidth, textBgHeight);
+      clearZone(x, y, width, height);
+    },
+    [labelSettings]
+  );
+
+  const drawBox = useCallback((x, y, width, height, color) => {
+    if (!imageCanvasRef.current) return;
+    const ctx = imageCanvasRef.current.getContext("2d");
     ctx.lineWidth = 2;
     ctx.strokeStyle = color;
     ctx.strokeRect(x, y, width, height);
-  }
+  }, []);
 
-  function drawBoxTextBG(x, y, width, height, color) {
-    const ctx = imageCanvas.getContext("2d");
-
-    // ctx.strokeStyle = getLabelSettings(label).color;
+  const drawBoxTextBG = useCallback((x, y, width, height, color) => {
+    if (!imageCanvasRef.current) return;
+    const ctx = imageCanvasRef.current.getContext("2d");
     ctx.fillStyle = color;
     ctx.fillRect(x, y, width, height);
-  }
+  }, []);
 
-  function drawBoxText(text, x, y) {
-    const ctx = imageCanvas.getContext("2d");
+  const drawBoxText = useCallback((text, x, y) => {
+    if (!imageCanvasRef.current) return;
+    const ctx = imageCanvasRef.current.getContext("2d");
     ctx.font = "12px Mono";
     ctx.fillStyle = "white";
     ctx.fillText(text, x, y);
-  }
+  }, []);
 
-  function clearZone(x, y, width, height) {
-    const ctx = zonesCanvas.getContext("2d");
+  const clearZone = useCallback((x, y, width, height) => {
+    if (!zonesCanvasRef.current) return;
+    const ctx = zonesCanvasRef.current.getContext("2d");
     ctx.clearRect(x - 3, y - 6, width + 6, height + 6);
-  }
+  }, []);
 
-  function onFacingModeClicked() {
-    if (facingMode === "user") {
-      setFacingMode("environment");
-    } else {
-      setFacingMode("user");
-    }
-  }
+  const onFacingModeClicked = useCallback(() => {
+    setFacingMode((prev) => (prev === "user" ? "environment" : "user"));
+  }, []);
 
-  function renderCamera() {
-    const displayVideoToggle = status.kafka === "connected" ? {} : { display: "none" };
+  const renderCamera = () => {
+    const displayVideoToggle = status?.kafka === "connected" ? {} : { display: "none" };
 
     if (!cameraEnabled || image) {
       return null;
@@ -207,6 +215,7 @@ function Photo({
               controls={false}
               autoPlay
               playsInline
+              muted
             />
             <div className="horizontal overlay">
               {/*<HorizontalCameraBorder className={"horizontal-camera-border-svg"} />*/}
@@ -217,14 +226,15 @@ function Photo({
           </div>
         </div>
         <div className="left-button-container button-container">
-          <Button
-            variant="contained"
-            size="large"
-            className="choose-camera-button"
-            onClick={onFacingModeClicked}
-          >
-            <FontAwesomeIcon icon={faSync} />
-          </Button>
+          <Tooltip title="Switch Camera">
+            <IconButton
+              className="choose-camera-button"
+              onClick={onFacingModeClicked}
+              size="large"
+            >
+              <FontAwesomeIcon icon={faSync} />
+            </IconButton>
+          </Tooltip>
         </div>
         <div className="center-button-container button-container">
           <Button
@@ -237,22 +247,19 @@ function Photo({
           </Button>
         </div>
         <div className="right-button-container button-container">
-          <Link to={"/video"} style={displayVideoToggle}>
-            <Button
-              variant="contained"
-              size="large"
-              className="choose-camera-button"
-              onClick={onFacingModeClicked}
-            >
-              <FontAwesomeIcon icon={faVideoSlash} />
-            </Button>
+          <Link to="/video" style={displayVideoToggle}>
+            <Tooltip title="Video Mode">
+              <IconButton className="choose-camera-button" size="large">
+                <FontAwesomeIcon icon={faVideoSlash} />
+              </IconButton>
+            </Tooltip>
           </Link>
         </div>
       </div>
     );
-  }
+  };
 
-  function renderSnapshot() {
+  const renderSnapshot = () => {
     const displayResult = image ? {} : { display: "none" };
     const displayButtons = predictionPending ? { display: "none" } : {};
     const displayLoading = predictionPending ? {} : { display: "none" };
@@ -317,7 +324,7 @@ function Photo({
         <div className="right-button-container button-container" style={displayButtons}></div>
       </div>
     );
-  }
+  };
 
   return (
     <div className="photo">
@@ -327,19 +334,4 @@ function Photo({
   );
 }
 
-function mapStateToProps(state) {
-  return { ...state.appReducer, ...state.photoReducer };
-}
-
-function mapDispatchToProps(dispatch) {
-  return {
-    reset: () => {
-      dispatch(resetSearch());
-    },
-    searchPhoto: (photo) => {
-      dispatch(searchPhoto(photo));
-    },
-  };
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(Photo);
+export default Photo;

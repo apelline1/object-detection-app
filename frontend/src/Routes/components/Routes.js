@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from "react";
-import { Switch, Route, Redirect } from "react-router-dom";
+import { Routes as RouterRoutes, Route, Navigate } from "react-router-dom";
 
 const Video = lazy(() => import("../../Video"));
 const Photo = lazy(() => import("../../Photo"));
@@ -12,13 +12,11 @@ const Routes = () => (
       </div>
     }
   >
-    <Switch>
-      <Route exact path="/">
-        <Redirect to="/photo" />
-      </Route>
-      <Route path="/photo" exact component={Photo} />
-      <Route path="/video" exact component={Video} />
-    </Switch>
+    <RouterRoutes>
+      <Route path="/" element={<Navigate to="/photo" replace />} />
+      <Route path="/photo" element={<Photo />} />
+      <Route path="/video" element={<Video />} />
+    </RouterRoutes>
   </Suspense>
 );
 

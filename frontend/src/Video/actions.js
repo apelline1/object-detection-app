@@ -14,3 +14,14 @@ export const sendImage = (image, userId, date, time) => ({
     time,
   },
 });
+
+export const SEND_VIDEO = "Video.SEND_VIDEO";
+export const sendVideo = (video, userId, date, time) => ({
+  type: SEND_VIDEO,
+  payload: {
+    video,
+    userId,
+    date,
+    time,
+  },
+});

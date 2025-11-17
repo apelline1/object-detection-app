@@ -2,6 +2,7 @@ module.exports.INCOMING_MESSAGE_TYPES = {
   INIT: "init",
   PING: "ping",
   IMAGE: "image",
+  VIDEO: "video",
 };
 
 module.exports.OUTGOING_MESSAGE_TYPES = {
