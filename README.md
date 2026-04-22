@@ -1,16 +1,14 @@
 # object-detection-app
-<<<<<<< HEAD
-The deployment time please remember to add the avanced deployment options:
-Under Environment variables (runtime only), create a Name / Value pair.
 
-Name = OBJECT_DETECTION_URL
+## Deployment Instructions
 
-Value = http://<service-name>:<service-port/predictions
+At deployment time, please remember to add the advanced deployment options:
 
-=======
-he deployment time please remember to add the avanced deployment options: Under Environment variables (runtime only), create a Name / Value pair.
+Under **Environment variables (runtime only)**, create a Name / Value pair:
 
-Name = OBJECT_DETECTION_URL
+- **Name**: `OBJECT_DETECTION_URL`
+- **Value**: `http://<service-name>:<service-port>/predictions`
 
-Value = "(http://object-detection-rest:8080/predictions)"
->>>>>>> a6a53b6 (README update)
+Example: `http://object-detection-rest:8080/predictions`
+
+For complete documentation, see [DOCUMENTATION.md](DOCUMENTATION.md)
