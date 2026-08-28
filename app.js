@@ -2,8 +2,8 @@
 
 const path = require("path");
 const Static = require("@fastify/static");
-const AutoLoad = require("fastify-autoload");
-const Sensible = require("fastify-sensible");
+const AutoLoad = require("@fastify/autoload");
+const Sensible = require("@fastify/sensible");
 
 const WebSocket = require("@fastify/websocket");
 const processSocketMessage = require("./socket/process-socket-message");

@@ -40,5 +40,4 @@ const constants = {
   KAFKA_TOPIC_OBJECTS,
 };
 
-console.log(constants)
 module.exports = constants;
